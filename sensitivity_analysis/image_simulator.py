@@ -10,10 +10,19 @@ import argparse
 from argparse import ArgumentParser
 import configparser
 import time
+from pathlib import Path
 
 from amiral import instructment, utils, parameter, config, array
 from amiral.extension import data_generator
 
+def get_snr (array, noise):
+    
+    mean = np.mean(array)
+    sig2 = np.std(noise)
+    
+    snr = mean / sig2
+    
+    return snr
 
 def get_otf_total(aosys_cls, psf_param): 
     """
@@ -55,17 +64,26 @@ def read_image (config_file, flux):
 
     return obj 
 
-
-def write2header (param,flux,keys): 
+def write2header (param,flux,snr ,keys): 
 
     hdr = fits.Header()
 
     param = np.append(param, flux)
+    param = np.append(param, snr)
 
     for i in range (len(keys)): 
         hdr[keys[i]] = param[i]
 
     return hdr
+
+def get_snr (array, noise):
+    
+    mean = np.mean(array)
+    sig2 = np.std(noise)
+    
+    snr = mean / sig2
+    
+    return snr
 
 def main ():
 
@@ -89,6 +107,9 @@ def main ():
 
     # Set output path
     output_path = config_file.get('path', 'output_path')
+
+    # If the output path doesnt exist, make one
+    Path(output_path).mkdir(parents=True, exist_ok=True)
 
     # Setting up dummy psf parameters for looping
     paramGuess, hyperparamGuess = config.set_paramdict(config_file, True)
@@ -114,12 +135,12 @@ def main ():
     guess_flux = np.linspace(5e6,5e9,int(args.number))
 
     # Setting the column index
-    keys = psf_key + hyper_key + ['flux']
+    keys = psf_key + hyper_key + ['flux'] + ['snr']
 
 
     # Main loop for generating simulated observations 
     for i in range (int(args.number)): 
-        guess_1 = np.array([guess_r0[i], psf_guess[1],guess_sig2[i]])
+        guess_1 = np.array([psf_guess[0], psf_guess[1],psf_guess[2]])
         guess_2 = psf_guess[3:]
         _guess = np.concatenate((guess_1,guess_2))
 
@@ -131,7 +152,7 @@ def main ():
         padded_obj = array.scale_array(obj, aosys.samp_factor[0])
         ft_obj = utils.fft2D(padded_obj, norm=True)
 
-        
+
         for j in range (int(args.number)): 
             # Looping over different noise 
             # get the noise
@@ -148,14 +169,18 @@ def main ():
 
             ft_img = ft_obj * _otf + ft_noise
 
-            img = np.real((utils.ifft2D(ft_img, norm=True)))
+            # Get the convoloved image
+            img = np.real(np.fft.fftshift((utils.ifft2D(ft_img, norm=True))))
+
+            # Get an SNR for each output, which would be saved to an output
+            snr = get_snr(img, _noise)
 
             print("Sum: ", np.sum(img))
             print("Noise of the object: ", np.sum(_noise))
             print("Retrieved Flux: ",np.sum(img) - np.sum(_noise))
             print("Flux Diff : ",np.sum(img) - np.sum(_noise)- guess_flux[i])
 
-            hdr = write2header (_guess,guess_flux[i],keys) 
+            hdr = write2header (_guess,guess_flux[i],snr,keys) 
             
             # output an image to a specific dir with name
             fits.writeto(output_path+ 'VESTA_'+ str(count) + '.fits', img, hdr)
@@ -163,6 +188,7 @@ def main ():
             print("%s has been saved to %s " %('VESTA_'+ str(count) + '.fits', output_path))
 
             case_info = np.append(_guess, guess_flux[i])
+            case_info = np.append(case_info, snr)
             print(case_info)
             data_file.append(case_info)
     
