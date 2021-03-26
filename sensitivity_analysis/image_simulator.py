@@ -132,13 +132,15 @@ def main ():
     # Setting up variables to be looped over
     guess_r0 = np.linspace(0.1, 0.25,int(args.number))
     guess_sig2 = np.linspace(0.1,2.6,int(args.number))
-    guess_flux = np.linspace(5e6,5e9,int(args.number))
+    guess_flux = np.linspace(5e6,5e12,int(args.number))
 
     # Setting the column index
     keys = psf_key + hyper_key + ['flux'] + ['snr']
 
 
-    # Main loop for generating simulated observations 
+    # Main loop for generating simulated observations
+    # BUG - Flux is not conserved again
+    # BUG - Should have padded the image before any scaling 
     for i in range (int(args.number)): 
         guess_1 = np.array([psf_guess[0], psf_guess[1],psf_guess[2]])
         guess_2 = psf_guess[3:]
@@ -150,6 +152,10 @@ def main ():
         # Dealing with the input object
         obj = read_image(config_file, guess_flux[i])
         padded_obj = array.scale_array(obj, aosys.samp_factor[0])
+
+        plt.imshow(np.log10(padded_obj)) 
+        plt.show()
+
         ft_obj = utils.fft2D(padded_obj, norm=True)
 
 
@@ -159,26 +165,37 @@ def main ():
 
             count = i*int(args.number)+j
 
+            # Read out noise
             _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = 10)
             ft_noise = utils.fft2D(_noise, norm=True)
 
-            sum_ifft_noise = np.sum(utils.ifft2D(utils.fft2D(_noise)))
+            # Photon noise
+            rng = np.random.default_rng()
+            _photon_noise = rng.poisson(padded_obj)
+            ft_photon_noise = utils.fft2D(_photon_noise)
+
+            sum_ifft_noise = np.sum(utils.ifft2D((_noise)))
             sum_noise = np.sum(_noise)
 
-            print("Diff noise %f" %(sum_ifft_noise - sum_noise))
-
-            ft_img = ft_obj * _otf + ft_noise
+            ft_img = ft_obj * _otf + ft_noise + ft_photon_noise
 
             # Get the convoloved image
-            img = np.real(np.fft.fftshift((utils.ifft2D(ft_img, norm=True))))
+            img = np.real((utils.ifft2D(ft_img)))
+
+            plt.imshow(img)
+            plt.show()
 
             # Get an SNR for each output, which would be saved to an output
             snr = get_snr(img, _noise)
 
             print("Sum: ", np.sum(img))
-            print("Noise of the object: ", np.sum(_noise))
-            print("Retrieved Flux: ",np.sum(img) - np.sum(_noise))
-            print("Flux Diff : ",np.sum(img) - np.sum(_noise)- guess_flux[i])
+            print("Flux:", guess_flux[i])
+
+            print("\nGauss Noise of the object: ", np.sum(_noise))
+            print("Photon Noise of the object: ", np.sum(_photon_noise))
+
+            print("\nRetrieved Flux: ",np.sum(img) - np.sum(_noise)-np.sum(_photon_noise))
+            print("Flux Diff : ",np.sum(img)-guess_flux[i])
 
             hdr = write2header (_guess,guess_flux[i],snr,keys) 
             
