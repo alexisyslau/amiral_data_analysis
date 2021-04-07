@@ -159,7 +159,7 @@ def main ():
     # Setting up variables to be looped over
     guess_r0 = np.linspace(0.1, 0.25,int(args.number))
     guess_sig2 = np.linspace(0.1,2.6,int(args.number))
-    guess_flux = np.linspace(5e6,5e12,int(args.number))
+    guess_flux = 5*np.logspace(6,14,int(args.number))
 
     # Setting the column index
     keys = psf_key + hyper_key + ['flux'] + ['snr']
