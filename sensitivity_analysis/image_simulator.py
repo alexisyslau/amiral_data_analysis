@@ -2,7 +2,7 @@
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
+from matplotlib import image, rcParams
 import csv
 import pandas as pd
 import os
@@ -11,9 +11,10 @@ from argparse import ArgumentParser
 import configparser
 import time
 from pathlib import Path
-
 from amiral import instructment, utils, parameter, config, array
 from amiral.extension import data_generator
+
+# TODO - Add SNR and SR function in
 
 def get_snr (array, noise):
     
@@ -100,6 +101,27 @@ def write2header (param,flux,snr ,keys):
 
     return hdr
 
+def add_noise (image, dimension, aosys, args, RON):
+
+    if args.noise == True:
+
+        print("Add noise to the object")
+
+        _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = RON)
+        rng = np.random.default_rng()
+        _photon_noise = rng.poisson(image)
+        
+        noise = _photon_noise+_noise
+        image = image + noise
+
+        return image
+    else: 
+        print("No noise")
+        return image
+
+
+    
+
 def get_snr (array, noise):
     
     mean = np.mean(array)
@@ -122,6 +144,10 @@ def main ():
 
     parser.add_argument('number', 
     help = 'numebr of images')
+
+    # Parameter search
+    parser.add_argument('--noise', '--n', dest = 'noise',
+    help = 'Add noise', action = 'store_true')
 
     # Store commend line arguments to args 
     args = parser.parse_args()
@@ -157,13 +183,12 @@ def main ():
         resolution_rad = aosys_profile['res'], dimension = dimension)
 
     # Setting up variables to be looped over
-    guess_r0 = np.linspace(0.1, 0.25,int(args.number))
-    guess_sig2 = np.linspace(0.1,2.6,int(args.number))
     guess_flux = 5*np.logspace(6,14,int(args.number))
+
+    noise_run = 10
 
     # Setting the column index
     keys = psf_key + hyper_key + ['flux'] + ['snr']
-
 
     # Main loop for generating simulated observations
     # BUG - Should have padded the image before any scaling 
@@ -174,8 +199,9 @@ def main ():
 
         # calculate the otf
         _otf = np.fft.ifftshift(get_otf_total(aosys, _guess))
+        # plt.imshow(np.real(np.log10(_otf)))
+        # plt.show()
  
-
         # Dealing with the input object
         obj = read_image(config_file, guess_flux[i])
 
@@ -185,32 +211,29 @@ def main ():
         padded_obj = array.scale_array(obj, aosys.samp_factor[0])        
         ft_obj = np.fft.fft2(np.fft.ifftshift(padded_obj))
 
-        for j in range (int(args.number)): 
+        for j in range (noise_run): 
             
             # Looping over different noise 
             # get the noise
-            count = i*int(args.number)+j
+            count = i*noise_run+j
+            print("Count", count)
 
             # Read out noise
             _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = 10)
-            ft_noise = np.fft.fft2(np.fft.ifftshift(_noise))
+
+            # All this should be centred
+            ft_img = ft_obj*_otf # ft_obj * _otf
+            _img = np.real(np.fft.ifft2(ft_img))
 
             # Photon noise
             rng = np.random.default_rng()
-            sum_ifft_noise = np.sum(np.fft.ifft2(ft_noise))
-            sum_noise = np.sum(_noise)
-
-            # print("\nDiff: %f" %(sum_ifft_noise-sum_noise))
-
-            # All this should be centred ... 
-            ft_img = ft_obj*_otf #+ (ft_noise + ft_photon_noise) + ft_obj * _otf
-            _img = np.real(np.fft.ifft2(ft_img))
-
             _photon_noise = rng.poisson(_img)
             noise = _photon_noise+_noise
 
-            # Get the convoloved image
-            img = np.real((_img+noise))
+            img = add_noise (_img, dimension, aosys, args, RON = 10)
+
+            # # Get the convoloved image
+            # img = np.real((_img+noise))
 
             # plt.imshow(img-noise)
             # plt.show()
@@ -221,11 +244,11 @@ def main ():
             # Get an SNR for each output, which would be saved to an output
             snr = get_snr(img, _noise)
 
-            print("Sum: ", np.sum(img))
-            print("Flux(object): ", guess_flux[i])
-            print("\nNoise of the object: ", np.sum((noise)))
-            print("\nPhoton Noise of the object: ", np.sum((_photon_noise)))
-            print("Retrieved Flux: ",np.sum(img) - np.sum(noise) - guess_flux[i])
+            # print("Sum: ", np.sum(img))
+            # print("Flux(object): ", guess_flux[i])
+            # print("\nNoise of the object: ", np.sum((noise)))
+            # print("\nPhoton Noise of the object: ", np.sum((_photon_noise)))
+            # print("Retrieved Flux: ",np.sum(img) - np.sum(noise) - guess_flux[i])
 
             hdr = write2header (_guess,guess_flux[i],snr,keys) 
             
