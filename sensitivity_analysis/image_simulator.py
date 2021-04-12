@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from amiral import instructment, utils, parameter, config, array
 from amiral.extension import data_generator
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 # TODO - Add SNR and SR function in
 
@@ -119,9 +120,6 @@ def add_noise (image, dimension, aosys, args, RON):
         print("No noise")
         return image
 
-
-    
-
 def get_snr (array, noise):
     
     mean = np.mean(array)
@@ -130,6 +128,49 @@ def get_snr (array, noise):
     snr = mean / sig2
     
     return snr
+
+
+def plot_images_noise (obj,conv_obj,noise,img):
+
+    default_size = 200
+
+    zoom_obj = array.zoom_array(obj, default_size)
+    zoom_conv_obj = array.zoom_array(conv_obj, default_size)
+    zoom_noise = array.zoom_array(noise, default_size)
+    zoom_img = array.zoom_array(img, default_size)
+
+
+    fig, ax = plt.subplots(2,2)
+
+    rcParams['figure.figsize'] = 33 ,24
+
+    divider = make_axes_locatable(ax[0,0])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    im = ax[0,0].imshow(zoom_conv_obj)
+    fig.colorbar(im,cax ,ax=ax[0,0])
+    ax[0,0].set_title('Convoloved Object\nFlux [e-]: %f' %(np.sum(conv_obj)), fontsize = '12')
+
+    divider = make_axes_locatable(ax[0,1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    im1 = ax[0,1].imshow(zoom_noise)
+    fig.colorbar(im1,cax ,ax=ax[0,0])
+    ax[0,1].set_title('Sum of the noise\nFlux [e-]: %f' %(np.sum(noise)), fontsize = '12')
+
+    divider = make_axes_locatable(ax[1,0])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    im2 = ax[1,0].imshow(img)
+    fig.colorbar(im2,cax ,ax=ax[1,0])
+    ax[1,0].set_title('Observed image\nFlux[e-]: %f' %(np.sum(img)), fontsize = '12')
+
+    divider = make_axes_locatable(ax[1,1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    im3 = ax[1,1].imshow(img-conv_obj-noise)
+    fig.colorbar(im3,cax ,ax=ax[1,0])
+    ax[1,1].set_title('Residual\nFlux[e-]: %f' %(np.sum(img-conv_obj-noise)), fontsize = '12')
+
+    plt.show()
+
+    pass
 
 def main ():
 
@@ -231,6 +272,8 @@ def main ():
             noise = _photon_noise+_noise
 
             img = add_noise (_img, dimension, aosys, args, RON = 10)
+
+            plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
 
             # # Get the convoloved image
             # img = np.real((_img+noise))
