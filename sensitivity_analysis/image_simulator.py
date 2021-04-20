@@ -224,7 +224,7 @@ def main ():
         resolution_rad = aosys_profile['res'], dimension = dimension)
 
     # Setting up variables to be looped over
-    guess_flux = 5*np.logspace(6,14,int(args.number))
+    guess_flux = 5.*np.logspace(4,14,int(args.number))
 
     noise_run = 10
 
@@ -273,7 +273,7 @@ def main ():
 
             img = add_noise (_img, dimension, aosys, args, RON = 10)
 
-            plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
+            # plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
 
             # # Get the convoloved image
             # img = np.real((_img+noise))
@@ -285,13 +285,13 @@ def main ():
             # plt.show()
   
             # Get an SNR for each output, which would be saved to an output
-            snr = get_snr(img, _noise)
+            snr = get_snr(img, noise)
 
-            # print("Sum: ", np.sum(img))
-            # print("Flux(object): ", guess_flux[i])
-            # print("\nNoise of the object: ", np.sum((noise)))
-            # print("\nPhoton Noise of the object: ", np.sum((_photon_noise)))
-            # print("Retrieved Flux: ",np.sum(img) - np.sum(noise) - guess_flux[i])
+            print("Sum: ", np.sum(img))
+            print("Flux(object): ", np.sum(_img))
+            print("Noise of the object: ", np.sum((noise)))
+            print("Photon Noise of the object: ", np.sum((_photon_noise)))
+            print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
             hdr = write2header (_guess,guess_flux[i],snr,keys) 
             
