@@ -112,14 +112,14 @@ def add_noise (image, dimension, aosys, args, RON):
 
         print("Add noise to the object")
 
-        _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = RON)
+        _noise = gauss_noise(dimension, RON = RON)
         rng = np.random.default_rng()
         _photon_noise = rng.poisson(image)
         
         noise = _photon_noise+_noise
         image = image + noise
 
-        return image
+        return image,noise
     else: 
         print("No noise")
         return image
@@ -243,7 +243,6 @@ def main ():
         # Check if there is any zero for the input object
         obj = forced_zero(obj)
 
-
         # Check the shape of the otf 
         # If the size of the otf is smaller than the image, bin it 
 
@@ -266,25 +265,20 @@ def main ():
             ft_img = ft_obj*_otf # ft_obj * _otf
             _img = np.real(np.fft.ifft2(ft_img))
 
-            # Photon noise
-            rng = np.random.default_rng()
-            _photon_noise = rng.poisson(_img)
-            noise = _photon_noise+_noise
+            if args.noise == True: 
+                img, noise = add_noise (_img, dimension, aosys, args, RON)
 
-            img = add_noise (_img, dimension, aosys, args, RON)
-
-            plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
-
-            # # Get the convoloved image
-            img = np.real((_img+noise))
+                # Get an SNR for each output, which would be saved to an output
+                snr = get_snr(img, noise)
+            else: 
+                img = _img
+                snr = 0
   
-            # Get an SNR for each output, which would be saved to an output
-            snr = get_snr(img, noise)
+            
 
             print("Sum: ", np.sum(img))
             print("Flux(object): ", np.sum(_img))
             print("Noise of the object: ", np.sum((noise)))
-            print("Photon Noise of the object: ", np.sum((_photon_noise)))
             print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
             hdr = write2header (_guess,guess_flux[i],snr,keys) 
