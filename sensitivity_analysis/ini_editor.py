@@ -39,6 +39,7 @@ def edit_ini_file (output_dir, output_fname, r0, sig2, data_path, data_csv, outp
 
 def copy_ini_file (input_dir, input_fname, output_dir,output_fname): 
     os.system("cp {input} {output}".format(input=input_dir+input_fname, output = output_dir+output_fname))
+    print("cp {input} {output}".format(input=input_dir+input_fname, output = output_dir+output_fname))
     pass 
 
 def read_csv_file (): 
@@ -97,7 +98,7 @@ def main ():
 
 # call the main
 if __name__ ==  "__main__":
-    print("\n============   .ini file editor    ============\n") 
+    print("\n============   .ini file editor    ============\n")
     main()
     print("\n============   End of Programme    ============\n")
 
