@@ -112,9 +112,16 @@ def add_noise (image, dimension, aosys, args, RON):
 
         print("Add noise to the object")
 
-        _noise = gauss_noise(dimension, RON = RON)
-        rng = np.random.default_rng()
-        _photon_noise = rng.poisson(image)
+        if aosys.samp_factor[1] == True:
+            _noise = gauss_noise(dimension, RON = RON)
+            rng = np.random.default_rng()
+            _photon_noise = rng.poisson(image)
+
+        else: 
+            _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = RON)
+            rng = np.random.default_rng()
+            _photon_noise = rng.poisson(image)
+            
         
         noise = _photon_noise+_noise
         image = image + noise
@@ -246,9 +253,11 @@ def main ():
         # Check the shape of the otf 
         # If the size of the otf is smaller than the image, bin it 
 
-        if np.shape(_otf)[0] != np.shape(obj)[0]: 
-            _psf = binning(np.real(np.fft.ifft2(_otf)), aosys.samp_factor[0])
+        if aosys.samp_factor[1] == True: 
+            _psf = binning(np.real(np.fft.ifft2(_otf)), int(aosys.samp_factor[0]))
             _otf = np.fft.fft2(_psf)
+        else: 
+            obj = array.zero_padding(obj, aosys.samp_factor[0])
  
         ft_obj = np.fft.fft2(np.fft.ifftshift(obj))
 
@@ -264,6 +273,7 @@ def main ():
 
             if args.noise == True: 
                 img, noise = add_noise (_img, dimension, aosys, args, RON)
+                # plot_images_noise(obj,_img, noise, img)
                 # Get an SNR for each output, which would be saved to an output
                 snr = get_snr(img, noise)
                 hdr = write2header (_guess,guess_flux[i],snr,keys)
