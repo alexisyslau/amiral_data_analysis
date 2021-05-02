@@ -26,7 +26,7 @@ def edit_ini_file (output_dir, output_fname, r0, sig2, data_path, data_csv, outp
     ini_config.set('psf parameter','amplitude', str(sig2))
     ini_config.set('path','data_path', data_path)
 
-    ini_config.set('path','data_path', data_path)
+    # ini_config.set('path','data_path', data_path)
     ini_config.set('path','data_csv', data_csv)
     ini_config.set('path','output_file', output_file)
     ini_config.set('path','output_crit_file', output_crit_file)
