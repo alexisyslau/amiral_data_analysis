@@ -258,9 +258,6 @@ def main ():
             count = i*noise_run+j
             print("Count", count)
 
-            # Read out noise
-            _noise = gauss_noise(dimension, RON)
-
             # All this should be centred
             ft_img = ft_obj*_otf # ft_obj * _otf
             _img = np.real(np.fft.ifft2(ft_img))
@@ -272,15 +269,15 @@ def main ():
                 snr = get_snr(img, noise)
                 hdr = write2header (_guess,guess_flux[i],snr,keys)
                 fits.writeto(output_path+ data_fname+'_noise_'+ str(count) + '.fits', noise, hdr)
-                
+                print("Noise of the object: ", np.sum((noise)))
+                print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
+
             else: 
                 img = _img
                 snr = 0
   
             print("Sum: ", np.sum(img))
             print("Flux(object): ", np.sum(_img))
-            print("Noise of the object: ", np.sum((noise)))
-            print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
             # output an image to a specific dir with name
             fits.writeto(output_path+ data_fname +'_'+ str(count) + '.fits', img, hdr)
