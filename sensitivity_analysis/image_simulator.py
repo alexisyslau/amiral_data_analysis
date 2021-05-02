@@ -14,6 +14,10 @@ from pathlib import Path
 from amiral import instructment, utils, parameter, config, array
 from amiral.extension import data_generator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from maoppy.utils import binning 
+
+# Global variable
+RON = 10 
 
 # TODO - Add SNR and SR function in
 
@@ -132,27 +136,19 @@ def get_snr (array, noise):
 
 def plot_images_noise (obj,conv_obj,noise,img):
 
-    default_size = 200
-
-    zoom_obj = array.zoom_array(obj, default_size)
-    zoom_conv_obj = array.zoom_array(conv_obj, default_size)
-    zoom_noise = array.zoom_array(noise, default_size)
-    zoom_img = array.zoom_array(img, default_size)
-
-
     fig, ax = plt.subplots(2,2)
 
     rcParams['figure.figsize'] = 33 ,24
 
     divider = make_axes_locatable(ax[0,0])
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    im = ax[0,0].imshow(zoom_conv_obj)
+    im = ax[0,0].imshow(np.real(conv_obj))
     fig.colorbar(im,cax ,ax=ax[0,0])
     ax[0,0].set_title('Convoloved Object\nFlux [e-]: %f' %(np.sum(conv_obj)), fontsize = '12')
 
     divider = make_axes_locatable(ax[0,1])
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    im1 = ax[0,1].imshow(zoom_noise)
+    im1 = ax[0,1].imshow(noise)
     fig.colorbar(im1,cax ,ax=ax[0,0])
     ax[0,1].set_title('Sum of the noise\nFlux [e-]: %f' %(np.sum(noise)), fontsize = '12')
 
@@ -240,8 +236,6 @@ def main ():
 
         # calculate the otf
         _otf = np.fft.ifftshift(get_otf_total(aosys, _guess))
-        # plt.imshow(np.real(np.log10(_otf)))
-        # plt.show()
  
         # Dealing with the input object
         obj = read_image(config_file, guess_flux[i])
@@ -249,18 +243,24 @@ def main ():
         # Check if there is any zero for the input object
         obj = forced_zero(obj)
 
-        padded_obj = array.scale_array(obj, aosys.samp_factor[0])        
-        ft_obj = np.fft.fft2(np.fft.ifftshift(padded_obj))
+
+        # Check the shape of the otf 
+        # If the size of the otf is smaller than the image, bin it 
+
+        if np.shape(_otf)[0] != np.shape(obj)[0]: 
+            _psf = binning(np.real(np.fft.ifft2(_otf)), aosys.samp_factor[0])
+            _otf = np.fft.fft2(_psf)
+ 
+        ft_obj = np.fft.fft2(np.fft.ifftshift(obj))
 
         for j in range (noise_run): 
-            
             # Looping over different noise 
             # get the noise
             count = i*noise_run+j
             print("Count", count)
 
             # Read out noise
-            _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = 10)
+            _noise = gauss_noise(dimension, RON)
 
             # All this should be centred
             ft_img = ft_obj*_otf # ft_obj * _otf
@@ -271,18 +271,12 @@ def main ():
             _photon_noise = rng.poisson(_img)
             noise = _photon_noise+_noise
 
-            img = add_noise (_img, dimension, aosys, args, RON = 10)
+            img = add_noise (_img, dimension, aosys, args, RON)
 
-            # plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
+            plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
 
             # # Get the convoloved image
-            # img = np.real((_img+noise))
-
-            # plt.imshow(img-noise)
-            # plt.show()
-
-            # plt.imshow(padded_obj)
-            # plt.show()
+            img = np.real((_img+noise))
   
             # Get an SNR for each output, which would be saved to an output
             snr = get_snr(img, noise)
