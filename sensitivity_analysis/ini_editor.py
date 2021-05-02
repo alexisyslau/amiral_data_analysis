@@ -86,9 +86,9 @@ def main ():
         copy_ini_file(input_dir, input_ini, output_dir,output_ini)
 
         _data_path = data_path + 'case_' + str(data_fname[i]) + '/'
-        _data_csv = data_csv + "_"+ str(data_fname[i]) + '.csv'
-        _output_file = output_file + "_"+ str(data_fname[i]) + '.csv'
-        _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) + '.csv'
+        _data_csv = data_csv + "_"+ str(data_fname[i]) 
+        _output_file = output_file + "_"+ str(data_fname[i]) 
+        _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) 
         _output_path = output_path + 'case_' + str(data_fname[i]) + '/'
 
 
