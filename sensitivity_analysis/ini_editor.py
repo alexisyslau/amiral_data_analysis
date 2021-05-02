@@ -62,6 +62,7 @@ def main ():
     input_dir = ini_config.get('path', 'input_dir')
     output_dir = ini_config.get('path', 'output_dir')
     data_path = ini_config.get('path', 'data_path')
+    output_path = ini_config.get('path', 'output_path')
 
     csv_fname = ini_config.get('file name', 'csv_fname')
     input_ini = ini_config.get('file name', 'input_ini')
@@ -88,7 +89,7 @@ def main ():
         _data_csv = data_csv + "_"+ str(data_fname[i]) + '.csv'
         _output_file = output_file + "_"+ str(data_fname[i]) + '.csv'
         _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) + '.csv'
-        _output_path = output_dir + 'case_' + str(data_fname[i]) + '/'
+        _output_path = output_path + 'case_' + str(data_fname[i]) + '/'
 
 
         edit_ini_file(output_dir, output_ini, r0[i], sig2[i], _data_path,_data_csv,_output_file,_output_crit_file,_output_path)
