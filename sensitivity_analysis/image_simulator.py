@@ -264,7 +264,6 @@ def main ():
 
             if args.noise == True: 
                 img, noise = add_noise (_img, dimension, aosys, args, RON)
-
                 # Get an SNR for each output, which would be saved to an output
                 snr = get_snr(img, noise)
                 hdr = write2header (_guess,guess_flux[i],snr,keys)
@@ -275,6 +274,8 @@ def main ():
             else: 
                 img = _img
                 snr = 0
+                hdr = write2header (_guess,guess_flux[i],snr,keys)
+
   
             print("Sum: ", np.sum(img))
             print("Flux(object): ", np.sum(_img))
