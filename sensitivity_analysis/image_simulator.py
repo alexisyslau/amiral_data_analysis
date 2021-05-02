@@ -270,22 +270,20 @@ def main ():
 
                 # Get an SNR for each output, which would be saved to an output
                 snr = get_snr(img, noise)
+                hdr = write2header (_guess,guess_flux[i],snr,keys)
+                fits.writeto(output_path+ data_fname+'_noise_'+ str(count) + '.fits', noise, hdr)
+                
             else: 
                 img = _img
                 snr = 0
   
-            
-
             print("Sum: ", np.sum(img))
             print("Flux(object): ", np.sum(_img))
             print("Noise of the object: ", np.sum((noise)))
             print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
-            hdr = write2header (_guess,guess_flux[i],snr,keys) 
-            
             # output an image to a specific dir with name
             fits.writeto(output_path+ data_fname +'_'+ str(count) + '.fits', img, hdr)
-            fits.writeto(output_path+ data_fname+'_noise_'+ str(count) + '.fits', noise, hdr)
             print("%s has been saved to %s " %(data_fname+'_'+ str(count) + '.fits', output_path))
 
             case_info = np.append(_guess, guess_flux[i])
