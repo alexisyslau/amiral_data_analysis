@@ -27,6 +27,7 @@ Fixed the error with float - int; a new error came up -->
 
     --> this line has been commented out at the moment
 
+    exec(open('muse_fitting.py').read())
 
 """
 # import library 
@@ -45,31 +46,28 @@ from maoppy.instrument import muse_nfm
 from maoppy.utils import circavg, circavgplt
 from scipy.optimize import least_squares
 
+
+
 def plot_r0_wvl (): 
     pass 
-
-def plot_
-
 
 #%% PARAMETERS TO MODIFY
 folder = "/Users/alau/Data/MUSE_DATA/HD_146233/"
 folderOUT = "/Users/alau/Data/MUSE_DATA/HD_146233/"
 
-filename = "HD_146233_cube_2_binned_10.fits"
+filename = "HD_146233_cube_1_binned_10.fits"
 
 # [rjlf] center the PSF a little bit, to help fitting convergence ;)
 xmin = 105 # [rjlf] my bad: it might be better to define center instead of min...
 ymin = 111 # (same comment)
 Npix = 200 # [rjlf] I think you experienced sizes issues below. It seems that if you specify a shape bigger than the actual array shape, the numpy indexation below does not cut properly the array
 
-
-
 #%% READ PSF
 fitsPSF = fits.open(folder+filename)
 fitsPSF.info()
+
 hdr = fitsPSF[0].header
 PSF = fitsPSF[1].data
-
 PSF = array.resize_array(PSF, size = 100, cent=(ymin,xmin))
 
 # Masking all nan values
@@ -117,8 +115,8 @@ guess = [0.145,2e-7,1.2,0.08,ratio,theta,1.5]
 
 #%% FIT PSF
 num = 80
-# for i in range(Nslice-1, Nslice):
-for i in range(num-1, num):
+for i in range(Nslice):
+# for i in range(num-1, num):
     wvl = wvl_min+i*wvl_slice
     wvl_list.append(wvl)
     samp = muse_nfm.samp(wvl)
@@ -268,20 +266,25 @@ plt.tight_layout()
 # [rjlf] This plot was useful since my PSF was centered
 # for this specific data, the center moves with the wavelength!!!
 plt.figure(5)
+
+
 plt.clf()
 cmap = 'hot'
+
+
 nb = 3
 it = 1
+
 for i in range(1,Nslice-nb,int(Nslice/nb)):
-    center = (ymin,xmin)
+    center = (50,43)
     plt.subplot(1,3,it)
-    x,y = circavgplt(PSF[i,...],center=center)
+    x,y = circavgplt(PSF[i,...])
     plt.semilogy(x,y,label="PSF")
     xm,ym = circavgplt(FIT[i,...],center=center)
     plt.semilogy(xm,ym,label="MODEL")
     xp,yp = circavgplt(np.abs(PSF[i,...]-FIT[i,...]),center=center)
     plt.semilogy(xp,(yp),label="|PSF-MODEL|")
-    plt.xlabel('Flux')
+    plt.xlabel('Pixel')
     plt.xlim(-50,50)
     plt.ylim(1e2,6e8)
     plt.title("wvl = %unm"%(wvl[i]*1e9))
@@ -350,19 +353,18 @@ keys = ['wvl', 'r0', 'bck', 'amplitude', 'alpha', 'ratio','theta', 'beta', 'flux
 
 # PARAM = [b,amp,alpha,ratio,theta,beta]
 fitted_psf_param = pd.DataFrame(data=outputdata,columns=keys)
-fitted_psf_param.to_csv('HD_146233_cube_2_binned_10.csv')
+fitted_psf_param.to_csv('HD_146233_cube_1_binned_10.csv')
 
-
-center=(50,43)
-plt.clf()
-x,y = circavgplt(PSF[num-1],center=center)
-plt.semilogy(x,y,label="PSF")
-xm,ym = circavgplt(FIT[num-1],center=center)
-plt.semilogy(xm,ym,label="MODEL")
-xp,yp = circavgplt(np.abs(PSF[num-1]-FIT[num-1]),center=center)
-plt.semilogy(xp,(yp),label="|PSF-MODEL|")
-plt.xlabel('Pixel')
-# plt.xlim(-50,50)
-plt.ylim(1e2,6e8)
-plt.title("wvl = %unm"%(wvl[num-1]*1e9))
-plt.legend()
+# center=(50,43)
+# plt.clf()
+# x,y = circavgplt(PSF[num-1],center=center)
+# plt.semilogy(x,y,label="PSF")
+# xm,ym = circavgplt(FIT[num-1],center=center)
+# plt.semilogy(xm,ym,label="MODEL")
+# xp,yp = circavgplt(np.abs(PSF[num-1]-FIT[num-1]),center=center)
+# plt.semilogy(xp,(yp),label="|PSF-MODEL|")
+# plt.xlabel('Pixel')
+# # plt.xlim(-50,50)
+# plt.ylim(1e2,6e8)
+# plt.title("wvl = %unm"%(wvl[num-1]*1e9))
+# plt.legend()
