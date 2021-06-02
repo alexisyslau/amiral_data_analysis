@@ -14,6 +14,10 @@ from pathlib import Path
 from amiral import instructment, utils, parameter, config, array
 from amiral.extension import data_generator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from maoppy.utils import binning 
+
+# Global variable
+RON = 10 
 
 # TODO - Add SNR and SR function in
 
@@ -108,14 +112,21 @@ def add_noise (image, dimension, aosys, args, RON):
 
         print("Add noise to the object")
 
-        _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = RON)
-        rng = np.random.default_rng()
-        _photon_noise = rng.poisson(image)
+        if aosys.samp_factor[1] == True:
+            _noise = gauss_noise(dimension, RON = RON)
+            rng = np.random.default_rng()
+            _photon_noise = rng.poisson(image)
+
+        else: 
+            _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = RON)
+            rng = np.random.default_rng()
+            _photon_noise = rng.poisson(image)
+            
         
         noise = _photon_noise+_noise
         image = image + noise
 
-        return image
+        return image,noise
     else: 
         print("No noise")
         return image
@@ -132,27 +143,19 @@ def get_snr (array, noise):
 
 def plot_images_noise (obj,conv_obj,noise,img):
 
-    default_size = 200
-
-    zoom_obj = array.zoom_array(obj, default_size)
-    zoom_conv_obj = array.zoom_array(conv_obj, default_size)
-    zoom_noise = array.zoom_array(noise, default_size)
-    zoom_img = array.zoom_array(img, default_size)
-
-
     fig, ax = plt.subplots(2,2)
 
     rcParams['figure.figsize'] = 33 ,24
 
     divider = make_axes_locatable(ax[0,0])
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    im = ax[0,0].imshow(zoom_conv_obj)
+    im = ax[0,0].imshow(np.real(conv_obj))
     fig.colorbar(im,cax ,ax=ax[0,0])
     ax[0,0].set_title('Convoloved Object\nFlux [e-]: %f' %(np.sum(conv_obj)), fontsize = '12')
 
     divider = make_axes_locatable(ax[0,1])
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    im1 = ax[0,1].imshow(zoom_noise)
+    im1 = ax[0,1].imshow(noise)
     fig.colorbar(im1,cax ,ax=ax[0,0])
     ax[0,1].set_title('Sum of the noise\nFlux [e-]: %f' %(np.sum(noise)), fontsize = '12')
 
@@ -240,8 +243,6 @@ def main ():
 
         # calculate the otf
         _otf = np.fft.ifftshift(get_otf_total(aosys, _guess))
-        # plt.imshow(np.real(np.log10(_otf)))
-        # plt.show()
  
         # Dealing with the input object
         obj = read_image(config_file, guess_flux[i])
@@ -249,55 +250,48 @@ def main ():
         # Check if there is any zero for the input object
         obj = forced_zero(obj)
 
-        padded_obj = array.scale_array(obj, aosys.samp_factor[0])        
-        ft_obj = np.fft.fft2(np.fft.ifftshift(padded_obj))
+        # Check the shape of the otf 
+        # If the size of the otf is smaller than the image, bin it 
+
+        if aosys.samp_factor[1] == True: 
+            _psf = binning(np.real(np.fft.ifft2(_otf)), int(aosys.samp_factor[0]))
+            _otf = np.fft.fft2(_psf)
+        else: 
+            obj = array.zero_padding(obj, aosys.samp_factor[0])
+ 
+        ft_obj = np.fft.fft2(np.fft.ifftshift(obj))
 
         for j in range (noise_run): 
-            
             # Looping over different noise 
             # get the noise
             count = i*noise_run+j
             print("Count", count)
 
-            # Read out noise
-            _noise = gauss_noise(dimension*aosys.samp_factor[0], RON = 10)
-
             # All this should be centred
             ft_img = ft_obj*_otf # ft_obj * _otf
             _img = np.real(np.fft.ifft2(ft_img))
 
-            # Photon noise
-            rng = np.random.default_rng()
-            _photon_noise = rng.poisson(_img)
-            noise = _photon_noise+_noise
+            if args.noise == True: 
+                img, noise = add_noise (_img, dimension, aosys, args, RON)
+                # plot_images_noise(obj,_img, noise, img)
+                # Get an SNR for each output, which would be saved to an output
+                snr = get_snr(img, noise)
+                hdr = write2header (_guess,guess_flux[i],snr,keys)
+                fits.writeto(output_path+ data_fname+'_noise_'+ str(count) + '.fits', noise, hdr)
+                print("Noise of the object: ", np.sum((noise)))
+                print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
-            img = add_noise (_img, dimension, aosys, args, RON = 10)
+            else: 
+                img = _img
+                snr = 0
+                hdr = write2header (_guess,guess_flux[i],snr,keys)
 
-            # plot_images_noise(obj, conv_obj=_img, noise=noise, img = img)
-
-            # # Get the convoloved image
-            # img = np.real((_img+noise))
-
-            # plt.imshow(img-noise)
-            # plt.show()
-
-            # plt.imshow(padded_obj)
-            # plt.show()
   
-            # Get an SNR for each output, which would be saved to an output
-            snr = get_snr(img, noise)
-
             print("Sum: ", np.sum(img))
             print("Flux(object): ", np.sum(_img))
-            print("Noise of the object: ", np.sum((noise)))
-            print("Photon Noise of the object: ", np.sum((_photon_noise)))
-            print("Retrieved Flux: ",(np.sum(img) - np.sum(noise) - guess_flux[i]))
 
-            hdr = write2header (_guess,guess_flux[i],snr,keys) 
-            
             # output an image to a specific dir with name
             fits.writeto(output_path+ data_fname +'_'+ str(count) + '.fits', img, hdr)
-            fits.writeto(output_path+ data_fname+'_noise_'+ str(count) + '.fits', noise, hdr)
             print("%s has been saved to %s " %(data_fname+'_'+ str(count) + '.fits', output_path))
 
             case_info = np.append(_guess, guess_flux[i])

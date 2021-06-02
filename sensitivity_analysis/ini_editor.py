@@ -24,9 +24,8 @@ def edit_ini_file (output_dir, output_fname, r0, sig2, data_path, data_csv, outp
     # Editing the ini file
     ini_config.set('psf parameter','r0', str(r0))
     ini_config.set('psf parameter','amplitude', str(sig2))
-    ini_config.set('path','data_path', data_path)
 
-    ini_config.set('path','data_path', data_path)
+    # ini_config.set('path','data_path', data_path)
     ini_config.set('path','data_csv', data_csv)
     ini_config.set('path','output_file', output_file)
     ini_config.set('path','output_crit_file', output_crit_file)
@@ -39,6 +38,7 @@ def edit_ini_file (output_dir, output_fname, r0, sig2, data_path, data_csv, outp
 
 def copy_ini_file (input_dir, input_fname, output_dir,output_fname): 
     os.system("cp {input} {output}".format(input=input_dir+input_fname, output = output_dir+output_fname))
+    print("cp {input} {output}".format(input=input_dir+input_fname, output = output_dir+output_fname))
     pass 
 
 def read_csv_file (): 
@@ -62,6 +62,7 @@ def main ():
     input_dir = ini_config.get('path', 'input_dir')
     output_dir = ini_config.get('path', 'output_dir')
     data_path = ini_config.get('path', 'data_path')
+    output_path = ini_config.get('path', 'output_path')
 
     csv_fname = ini_config.get('file name', 'csv_fname')
     input_ini = ini_config.get('file name', 'input_ini')
@@ -85,10 +86,10 @@ def main ():
         copy_ini_file(input_dir, input_ini, output_dir,output_ini)
 
         _data_path = data_path + 'case_' + str(data_fname[i]) + '/'
-        _data_csv = data_csv + "_"+ str(data_fname[i]) + '.csv'
-        _output_file = output_file + "_"+ str(data_fname[i]) + '.csv'
-        _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) + '.csv'
-        _output_path = output_dir + 'case_' + str(data_fname[i]) + '/'
+        _data_csv = data_csv + "_"+ str(data_fname[i]) 
+        _output_file = output_file + "_"+ str(data_fname[i]) 
+        _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) 
+        _output_path = output_path + 'case_' + str(data_fname[i]) + '/'
 
 
         edit_ini_file(output_dir, output_ini, r0[i], sig2[i], _data_path,_data_csv,_output_file,_output_crit_file,_output_path)
@@ -97,7 +98,7 @@ def main ():
 
 # call the main
 if __name__ ==  "__main__":
-    print("\n============   .ini file editor    ============\n") 
+    print("\n============   .ini file editor    ============\n")
     main()
     print("\n============   End of Programme    ============\n")
 
