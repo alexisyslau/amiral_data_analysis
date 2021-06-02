@@ -74,7 +74,7 @@ def gen_psf (aosys, psfParam, noise = False) -> np.ndarray:
     """
     # Initialize PSF model
     samp = muse_nfm.samp(psfParam['wvl']) 
-    psfmodel = Psfao((aosys['nPix'],aosys['nPix']),system=muse_nfm,samp=samp)
+    psfmodel = Psfao((aosys['nPix'],aosys['nPix']),system=muse_nfm,samp=samp, fixed_k= int(5))
 
     # from a dictionary back to array
     param = [psfParam['r0'],psfParam['background'],psfParam['amplitude'],psfParam['alpha'],psfParam['ratio'],psfParam['theta'],psfParam['beta']]
@@ -135,6 +135,7 @@ def main ():
         
     elif (args.mode != 'image' and input_file == True): 
         psf = []
+
         # Read the psf parameters from .csv file
         for i in range (len(psfParam['wvl'])):
             _df = {
