@@ -29,6 +29,11 @@ Fixed the error with float - int; a new error came up -->
 
     exec(open('muse_fitting.py').read())
 
+TODO 
+1/ Organise the plotting functions 
+2/ Accept cmd argument
+
+
 """
 # import library 
 from typing import KeysView
@@ -37,6 +42,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from amiral import array
+import os
 
 import matplotlib as mpl
 mpl.rcParams['font.size'] = 20
@@ -46,16 +52,61 @@ from maoppy.instrument import muse_nfm
 from maoppy.utils import circavg, circavgplt
 from scipy.optimize import least_squares
 
+import argparse
+from argparse import ArgumentParser
 
+import datetime
 
-def plot_r0_wvl (): 
+def cost(r0 : np.ndarray,r: np.ndarray, wvl: np.ndarray, index: np.ndarray, pow: float = 6./5.) -> 'function':
+    """
+        Fitting function for r0 against wavelength: r0 ~ wvl^(6/5)
+
+    Args:
+        r0 (np.ndarray): Fried parameters in metre. 
+        r (np.ndarray): Initial guess for the cost function (a function which would calculate the vector residual)
+        wvl (np.ndarray): Corresponding wavelengths for r0
+        index (np.ndarray): Filtered index of the r0 and wvl array
+        pow (float, optional): power of the wavelength. Defaults to 6/5..
+
+    Returns:
+        residual between 2 vectors (function)
+    """
+    return r0[index] - r*(wvl[index]/500.*1e9)**(6./5.)
+
+def plot_r0_wvl (r0: np.ndarray,x0: float, wvl: np.ndarray, index: np.ndarray, pow: float = 6./5., save = False):
+    """
+    TODO - Add a flexibilty for defining the path
+    
+        Plot r0 (cm) vs wavelength (nm) with a theoretical prediction, 
+        i.e. scatter plot for your input and a best fit based on your input
+
+    Args:
+        r0 (np.ndarray): r0 (np.ndarray): fried parameters in metre. 
+        x0 (float): best fit parameter from the cost function 
+        wvl (np.ndarray): corresponding wavelengths for r0
+        index (np.ndarray): Filtered index of the r0 and wvl array
+        pow (float, optional): power of the wavelength. Defaults to 6/5..
+        save (boolean,optional): option to save the figrue. Defaults to False.
+            If True, YY_MM_DD_HHMM would be added in front of the 
+    """
+    fig, ax = plt.subplot()
+    ax.plot(wvl[index]*1e9,(x0*(wvl[index]/500.*1e9)**(pow))*100.,color="C1",linewidth=4,label="Theory",zorder=0)
+    ax.scatter(wvl[index]*1e9,R0[index]*100.,label="Fit",zorder=1,s=25)
+
+    if save == True: 
+        date  = datetime.datetime.now()
+        time_stamp = date.strftime("%Y_%m_%d_%H%M")
+        fig.savefig(time_stamp+'r0_vs_wvl.pdf', dpi = 300)
+        print("%s has been saved to %s" %(time_stamp+'r0_vs_wvl.pdf', os.getcwd()))
+    
     pass 
+
 
 #%% PARAMETERS TO MODIFY
 folder = "/Users/alau/Data/MUSE_DATA/HD_146233/"
 folderOUT = "/Users/alau/Data/MUSE_DATA/HD_146233/"
 
-filename = "HD_146233_cube_1_binned_10.fits"
+filename = "HD_146233_cube_2_binned_10.fits"
 
 # [rjlf] center the PSF a little bit, to help fitting convergence ;)
 xmin = 105 # [rjlf] my bad: it might be better to define center instead of min...
@@ -68,7 +119,9 @@ fitsPSF.info()
 
 hdr = fitsPSF[0].header
 PSF = fitsPSF[1].data
-PSF = array.resize_array(PSF, size = 100, cent=(ymin,xmin))
+# PSF = array.resize_array(PSF, size = 100, cent=(ymin,xmin))
+
+print(muse_nfm)
 
 # Masking all nan values
 PSF = np.ma.masked_invalid(PSF)
@@ -114,22 +167,26 @@ fixed = [False,True,False,False,True,True,False]
 guess = [0.145,2e-7,1.2,0.08,ratio,theta,1.5]
 
 #%% FIT PSF
-num = 80
-for i in range(Nslice):
-# for i in range(num-1, num):
+num = 50
+
+# samp = muse_nfm.samp(wvl_min)
+
+# for i in range(Nslice):
+for i in range(num-1, num):
     wvl = wvl_min+i*wvl_slice
     wvl_list.append(wvl)
     samp = muse_nfm.samp(wvl)
     print("Iteration %2u / %2u"%(i+1,Nslice))
     print("Current wavelength: %.2e" %(wvl))
+    print("Sampling: %2f" %(samp))
     
     if np.sum(PSF[i,...]) > 1e5:
         good += [i]
         weights = 1.0/(PSF[i]*(PSF[i]>0)+muse_nfm.ron**2) #np.ones_like(PSF[i,...])
-        bad = np.where(PSF[i].mask == True) # all columns and rows in [i]
+        bad = np.where(PSF[i].mask == True) # masking the nan values in here
         weights[bad[0],bad[1]] = 0.
 
-        out = psffit(PSF[i],Psfao,guess,weights=weights,system=muse_nfm,samp=samp,fixed=fixed)
+        out = psffit(PSF[i],Psfao,guess,weights=weights,system=muse_nfm,fixed_k = int(5), samp=samp,fixed=fixed)
         
         x0 = out.x # [rjlf] Use fitted values for the next slice -> improves convergence speed!
         R0[i] = x0[0]
@@ -167,8 +224,9 @@ laser_max = 595 +7
 index = np.where(R0 > 0)[0] # [rjlf] do not account for r0 that where not properly fitted
 
 # [rjlf] Fit all the r0 found with the theoretical curve: r0 ~ wvl^(6/5)
-def cost(r):
-    return R0[index] - r*(wvl[index]/500.*1e9)**(6./5.)
+# def cost(r):
+#     # print('Hi',r)
+#     return R0[index] - r*(wvl[index]/500.*1e9)**(6./5.)
 
 roptim = least_squares(cost,0.13).x[0]
 
@@ -271,12 +329,13 @@ plt.figure(5)
 plt.clf()
 cmap = 'hot'
 
+center = (ymin,xmin)
 
 nb = 3
 it = 1
 
 for i in range(1,Nslice-nb,int(Nslice/nb)):
-    center = (50,43)
+    
     plt.subplot(1,3,it)
     x,y = circavgplt(PSF[i,...])
     plt.semilogy(x,y,label="PSF")
@@ -349,22 +408,48 @@ outputdata = {
     'dx':  DXDY[:,0], 
     'dy':  DXDY[:,1]
 }
-keys = ['wvl', 'r0', 'bck', 'amplitude', 'alpha', 'ratio','theta', 'beta', 'flux(amp)', 'flux(bck)', 'dx', 'dy']
+keys = ['wvl', 'r0', 'background', 'amplitude', 'alpha', 'ratio','theta', 'beta', 'flux(amp)', 'flux(bck)', 'dx', 'dy']
 
 # PARAM = [b,amp,alpha,ratio,theta,beta]
 fitted_psf_param = pd.DataFrame(data=outputdata,columns=keys)
-fitted_psf_param.to_csv('HD_146233_cube_1_binned_10.csv')
+fitted_psf_param.to_csv('HD_146233_cube_2_binned_10_FULL_samp.csv')
 
 # center=(50,43)
 # plt.clf()
-# x,y = circavgplt(PSF[num-1],center=center)
-# plt.semilogy(x,y,label="PSF")
-# xm,ym = circavgplt(FIT[num-1],center=center)
-# plt.semilogy(xm,ym,label="MODEL")
-# xp,yp = circavgplt(np.abs(PSF[num-1]-FIT[num-1]),center=center)
-# plt.semilogy(xp,(yp),label="|PSF-MODEL|")
-# plt.xlabel('Pixel')
-# # plt.xlim(-50,50)
+
+num = 0
+
+plt.clf()
+center = (111,104)
+x,y = circavgplt(PSF[num-1],center=center)
+plt.semilogy(x,y,label="PSF")
+xm,ym = circavgplt(FIT[num-1],center=center)
+plt.semilogy(xm,ym,label="MODEL")
+xp,yp = circavgplt(np.abs(PSF[num-1]-FIT[num-1]),center=center)
+plt.semilogy(xp,(yp),label="|PSF-MODEL|")
+plt.xlabel('Pixel')
+# plt.xlim(-50,50)
 # plt.ylim(1e2,6e8)
-# plt.title("wvl = %unm"%(wvl[num-1]*1e9))
-# plt.legend()
+plt.title("wvl = %unm"%(wvl[num-1]*1e9))
+plt.legend()
+
+plt.show()
+
+# def main ():
+
+#     # Setting flags and cmd arugments for the scipt
+#     parser = argparse.ArgumentParser()
+
+#     parser.add_argument('filename', 
+#     help = 'the config file which contains path of the data and the name of the file')
+
+#     # Store commend line arguments to args 
+#     args = parser.parse_args()
+
+    
+#     pass
+
+# if __name__ ==  "__main__":
+#     print("\nPerform PSF fitting with maoppy\n") 
+#     main()
+#     print("\nEnd of Programme\n")
