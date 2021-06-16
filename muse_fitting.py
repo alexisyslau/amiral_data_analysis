@@ -76,7 +76,7 @@ def cost(r0 : np.ndarray,r: np.ndarray, wvl: np.ndarray, index: np.ndarray, pow:
 def plot_r0_wvl (r0: np.ndarray,x0: float, wvl: np.ndarray, index: np.ndarray, pow: float = 6./5., save = False):
     """
     TODO - Add a flexibilty for defining the path
-    
+
         Plot r0 (cm) vs wavelength (nm) with a theoretical prediction, 
         i.e. scatter plot for your input and a best fit based on your input
 
@@ -92,14 +92,24 @@ def plot_r0_wvl (r0: np.ndarray,x0: float, wvl: np.ndarray, index: np.ndarray, p
     fig, ax = plt.subplot()
     ax.plot(wvl[index]*1e9,(x0*(wvl[index]/500.*1e9)**(pow))*100.,color="C1",linewidth=4,label="Theory",zorder=0)
     ax.scatter(wvl[index]*1e9,R0[index]*100.,label="Fit",zorder=1,s=25)
+    ax.set_xlim(5, 25)
+    ax.set_ylabel(r'$\mathrm{r_0[cm]}$', fontsize = 14)
+    ax.set_xlabel(r'$\mathrm{wavelength [nm]}$', fontsize = 14)
+    ax.legend()
 
     if save == True: 
         date  = datetime.datetime.now()
         time_stamp = date.strftime("%Y_%m_%d_%H%M")
         fig.savefig(time_stamp+'r0_vs_wvl.pdf', dpi = 300)
         print("%s has been saved to %s" %(time_stamp+'r0_vs_wvl.pdf', os.getcwd()))
-    
     pass 
+
+def plot_residual_image (data, fit):
+
+    pass
+
+
+
 
 
 #%% PARAMETERS TO MODIFY
@@ -230,49 +240,49 @@ index = np.where(R0 > 0)[0] # [rjlf] do not account for r0 that where not proper
 
 roptim = least_squares(cost,0.13).x[0]
 
-plt.figure(1)
-plt.clf()
-ax = plt.subplot(111)
-plt.plot(wvl[index]*1e9,(roptim*(wvl[index]/500.*1e9)**(6./5.))*100.,color="C1",linewidth=4,label="Theory",zorder=0)
-plt.scatter(wvl[index]*1e9,R0[index]*100.,label="Fit",zorder=1,s=25)
+# plt.figure(1)
+# plt.clf()
+# ax = plt.subplot(111)
+# plt.plot(wvl[index]*1e9,(roptim*(wvl[index]/500.*1e9)**(6./5.))*100.,color="C1",linewidth=4,label="Theory",zorder=0)
+# plt.scatter(wvl[index]*1e9,R0[index]*100.,label="Fit",zorder=1,s=25)
 #plt.xlabel("Lambda [nm]",fontsize=fs)
 #plt.ylabel("r0 [cm]",fontsize=fs)
-plt.ylim(5,25)
-plt.xlim(400,950)
-plt.grid()
+# plt.ylim(5,25)
+# plt.xlim(400,950)
+# plt.grid()
 #plt.fill([laser_min,laser_max,laser_max,laser_min],[plt.ylim()[0],plt.ylim()[0],plt.ylim()[1],plt.ylim()[1]],color="gray",alpha=.5)
 #plt.title("Fried parameter")
-plt.legend()
-plt.xticks()
-plt.yticks()
+# plt.legend()
+# plt.xticks()
+# plt.yticks()
 #plt.fill([laser_min,laser_max,laser_max,laser_min],[plt.ylim()[0],plt.ylim()[0],plt.ylim()[1],plt.ylim()[1]],color="gray",alpha=.5)
 
-print("r0[500nm] = %.2f cm"%(roptim*100))
+# print("r0[500nm] = %.2f cm"%(roptim*100))
 
-plt.legend(fontsize=20)
-plt.xticks(fontsize=20)
-plt.yticks(fontsize=20)
-plt.xlabel('$\lambda$ [nm]',fontsize=20)
-plt.ylabel('$r_0$ [cm]',fontsize=20)
+# plt.legend(fontsize=20)
+# plt.xticks(fontsize=20)
+# plt.yticks(fontsize=20)
+# plt.xlabel('$\lambda$ [nm]',fontsize=20)
+# plt.ylabel('$r_0$ [cm]',fontsize=20)
 
 
-plt.figure(2)
-plt.clf()
+# plt.figure(2)
+# plt.clf()
 
-index = np.max(np.arange(Nslice)*((wvl*1e9)<laser_min))+1
-plt.plot(wvl[1:index]*1e9,AMP[1:index]*1e-8,color='C0',linewidth=2,label='Flux [1e8]')
-plt.plot(wvl[1:index]*1e9,BCK[1:index],color='C1',linewidth=2,label='bck')
+# index = np.max(np.arange(Nslice)*((wvl*1e9)<laser_min))+1
+# plt.plot(wvl[1:index]*1e9,AMP[1:index]*1e-8,color='C0',linewidth=2,label='Flux [1e8]')
+# plt.plot(wvl[1:index]*1e9,BCK[1:index],color='C1',linewidth=2,label='bck')
 
-index = np.max(np.arange(Nslice)*((wvl*1e9)<laser_max))+1
-plt.plot(wvl[index:]*1e9,AMP[index:]*1e-8,color='C0',linewidth=2)
-plt.plot(wvl[index:]*1e9,BCK[index:],color='C1',linewidth=2)
+# index = np.max(np.arange(Nslice)*((wvl*1e9)<laser_max))+1
+# plt.plot(wvl[index:]*1e9,AMP[index:]*1e-8,color='C0',linewidth=2)
+# plt.plot(wvl[index:]*1e9,BCK[index:],color='C1',linewidth=2)
 
-plt.grid()
-plt.xticks(plt.xticks()[0])
-plt.xlabel("Lambda [nm]")
-plt.ylabel("Flux & Bck [photon]")
-plt.legend()
-plt.xlim(wvl[1]*1e9,wvl[-1]*1e9)
+# plt.grid()
+# plt.xticks(plt.xticks()[0])
+# plt.xlabel("Lambda [nm]")
+# plt.ylabel("Flux & Bck [photon]")
+# plt.legend()
+# plt.xlim(wvl[1]*1e9,wvl[-1]*1e9)
 
 
 
