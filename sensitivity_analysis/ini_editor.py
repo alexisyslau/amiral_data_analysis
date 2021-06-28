@@ -25,7 +25,7 @@ def edit_ini_file (output_dir, output_fname, r0, sig2, data_path, data_csv, outp
     ini_config.set('psf parameter','r0', str(r0))
     ini_config.set('psf parameter','amplitude', str(sig2))
 
-    # ini_config.set('path','data_path', data_path)
+    ini_config.set('path','data_path', data_path)
     ini_config.set('path','data_csv', data_csv)
     ini_config.set('path','output_file', output_file)
     ini_config.set('path','output_crit_file', output_crit_file)
@@ -41,11 +41,6 @@ def copy_ini_file (input_dir, input_fname, output_dir,output_fname):
     print("cp {input} {output}".format(input=input_dir+input_fname, output = output_dir+output_fname))
     pass 
 
-def read_csv_file (): 
-
-    pass
-
-
 def main ():
     
     # Setting flags and cmd arugments for the scipt
@@ -59,6 +54,7 @@ def main ():
     # Load .ini file as an object
     ini_config = config.load_config(args)
 
+    # Getting the variables
     input_dir = ini_config.get('path', 'input_dir')
     output_dir = ini_config.get('path', 'output_dir')
     data_path = ini_config.get('path', 'data_path')
@@ -83,6 +79,7 @@ def main ():
 
     for i in range (len(data_fname)): 
         output_ini = output_fname + "_"+ str(data_fname[i]) + ".ini"
+        print(output_ini)
         copy_ini_file(input_dir, input_ini, output_dir,output_ini)
 
         _data_path = data_path + 'case_' + str(data_fname[i]) + '/'
@@ -90,7 +87,6 @@ def main ():
         _output_file = output_file + "_"+ str(data_fname[i]) 
         _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) 
         _output_path = output_path + 'case_' + str(data_fname[i]) + '/'
-
 
         edit_ini_file(output_dir, output_ini, r0[i], sig2[i], _data_path,_data_csv,_output_file,_output_crit_file,_output_path)
 
