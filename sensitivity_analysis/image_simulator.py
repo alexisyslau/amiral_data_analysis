@@ -1,3 +1,15 @@
+"""
+    Image simulator for generating simulated observations with PSFAO19 model
+
+
+Returns:
+    [type]: [description]
+
+
+    TODO - Add maoppy in here!
+"""
+
+
 # Packages required
 import numpy as np
 from astropy.io import fits
@@ -84,6 +96,16 @@ def forced_zero (array):
         return array
 
 def read_image (config_file, flux): 
+    """
+    Read the iamge path from the config file. 
+
+    Args:
+        config_file (config object): [description]
+        flux (float): Flux 
+
+    Returns:
+        [type]: [description]
+    """
 
     input_dir = config_file.get('path', 'data_path')
     data_fname = config_file.get('path', 'data_file')
@@ -218,13 +240,27 @@ def main ():
 
     # Get the system profile
     aosys_profile = config.get_instructment_profile(config_file)
-    dimension = config_file.getint('custom', 'dimension')
+
+    # Read the dimension from the input file, deal with the padding later
+    # TODO - May be add an option to opt out "no padding?"
+    obj = read_image(config_file, 1.)
+    dimension = np.shape(obj)[0]
+
+    # dimension = config_file.getint('custom', 'dimension')
 
     # Setting the telescope system for generating PSF
-    aosys = instructment.aoSystem(diameter = aosys_profile['d'], 
-        occ_ratio = aosys_profile['occ'],no_acutuator = aosys_profile['nact'], 
-        sampling = aosys_profile['sampling'], wavelength = aosys_profile['wvl']*1e-9, 
-        resolution_rad = aosys_profile['res'], dimension = dimension)
+    telescope = config_file.get('telescope', 'name')
+    
+    if telescope == 'custom': 
+        aosys = instructment.aoSystem(diameter = aosys_profile['d'], 
+            occ_ratio = aosys_profile['occ'],no_acutuator = aosys_profile['nact'], 
+            sampling = aosys_profile['sampling'], wavelength = aosys_profile['wvl']*1e-9, 
+            resolution_rad = aosys_profile['res'], dimension = dimension)
+    else: 
+        aosys = instructment.aoSystem(diameter = aosys_profile['d'], 
+            occ_ratio = aosys_profile['occ'],no_acutuator = aosys_profile['nact'], 
+            wavelength = aosys_profile['wvl']*1e-9, 
+            resolution_rad = aosys_profile['res'], dimension = dimension)
 
     # Setting up variables to be looped over
     guess_flux = 5.*np.logspace(4,14,int(args.number))
