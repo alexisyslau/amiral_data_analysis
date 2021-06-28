@@ -48,6 +48,10 @@ def main ():
     parser.add_argument('filename', 
     help = 'the config file which contains path of the data and the name of the file')
 
+    parser.add_argument('--image', '--i', dest = 'image',
+    help= "whether it is for image generator or not", action = 'store_true')
+    parser.set_defaults(image = False)
+
     # Store commend line arguments to args 
     args = parser.parse_args()
 
@@ -82,7 +86,11 @@ def main ():
         print(output_ini)
         copy_ini_file(input_dir, input_ini, output_dir,output_ini)
 
-        _data_path = data_path + 'case_' + str(data_fname[i]) + '/'
+        if args.image == False: 
+            _data_path = data_path + 'case_' + str(data_fname[i]) + '/'
+        else: 
+             _data_path = data_path 
+             
         _data_csv = data_csv + "_"+ str(data_fname[i]) 
         _output_file = output_file + "_"+ str(data_fname[i]) 
         _output_crit_file = output_crit_file + "_"+ str(data_fname[i]) 
