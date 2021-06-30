@@ -1,12 +1,15 @@
 """
-    Image simulator for generating simulated observations with PSFAO19 model
+    Image simulator for generating simulated observations with PSFAO19 model. 
 
+    If the directory doesnt exist, it will create one because I am lazy zzzzz. 
 
 Returns:
     [type]: [description]
 
 
-    TODO - Add maoppy in here!
+    TODO - 1/ Add maoppy in here!
+    TODO - 2/ Add a function which allow you to import PSF for direct convolution (in FFT space)
+
 """
 
 
@@ -95,9 +98,9 @@ def forced_zero (array):
     else: 
         return array
 
-def read_image (config_file, flux): 
+def read_image (input_dir, data_fname): 
     """
-    Read the iamge path from the config file. 
+    Read the image path from the config file. 
 
     Args:
         config_file (config object): [description]
@@ -107,12 +110,8 @@ def read_image (config_file, flux):
         [type]: [description]
     """
 
-    input_dir = config_file.get('path', 'data_path')
-    data_fname = config_file.get('path', 'data_file')
-
     img_obj = fits.open(input_dir + data_fname + ".fits")
     obj = img_obj[0].data 
-    obj = obj/np.sum(obj)*flux
 
     return obj 
 
@@ -211,9 +210,14 @@ def main ():
     parser.add_argument('number', 
     help = 'numebr of images')
 
-    # Parameter search
+    # Add noise or not
     parser.add_argument('--noise', '--n', dest = 'noise',
     help = 'Add noise', action = 'store_true')
+
+    # Input PSF files or not
+    # TODO - Can you do store False? 
+    parser.add_argument('--psf', '--h', dest = 'psf',
+    help = 'Input PSF', action = 'store_true')
 
     # Store commend line arguments to args 
     args = parser.parse_args()
@@ -221,8 +225,9 @@ def main ():
     # config object to be read
     config_file = config.load_config(args)
 
-    # get the data name
+    # Set the path
     data_fname = config_file.get('path', 'data_file')
+    input_dir = config_file.get('path', 'input_path')
 
     # Set output path
     output_path = config_file.get('path', 'output_path')
@@ -241,16 +246,13 @@ def main ():
     # Get the system profile
     aosys_profile = config.get_instructment_profile(config_file)
 
-    # Read the dimension from the input file, deal with the padding later
-    # TODO - May be add an option to opt out "no padding?"
-    obj = read_image(config_file, 1.)
+    # Get your object
+    obj = read_image(input_dir, data_fname)
     dimension = np.shape(obj)[0]
-
-    # dimension = config_file.getint('custom', 'dimension')
-
+    
     # Setting the telescope system for generating PSF
     telescope = config_file.get('telescope', 'name')
-    
+
     if telescope == 'custom': 
         aosys = instructment.aoSystem(diameter = aosys_profile['d'], 
             occ_ratio = aosys_profile['occ'],no_acutuator = aosys_profile['nact'], 
@@ -270,8 +272,24 @@ def main ():
     # Setting the column index
     keys = psf_key + hyper_key + ['flux'] + ['snr']
 
+    # TODO - Add the input psf file function in, it should not be too much work lmao
+    if args.psf == True: 
+        # TODO - Add in PSF files 
+        # Load in PSF files for convolution
+        psf_dir = config_file.get('path', 'psf_path')
+        psf_fname = config_file.get('path', 'psf_fname')
+        
+        # Open individual PSF files
+        _psf = fits.open(psf_dir + psf_fname + ".fits")
+        psf = _psf[0].data 
+        
+        # Get the OTF
+        otf = np.fft.fft2(psf)
+        ft_obj = np.fft.fft2(obj)
+
+        pass
+
     # Main loop for generating simulated observations
-    # BUG - Should have padded the image before any scaling 
     for i in range (int(args.number)): 
         guess_1 = np.array([psf_guess[0], psf_guess[1],psf_guess[2]])
         guess_2 = psf_guess[3:]
